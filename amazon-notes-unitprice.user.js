@@ -7,6 +7,7 @@
 // @match        https://www.amazon.com/*/dp/*
 // @match        https://www.amazon.com/gp/product/*
 // @match        https://www.amazon.com/cart/smart-wagon*
+// @match        https://www.amazon.com/s*
 // @icon         https://www.amazon.com/favicon.ico
 // @grant        none
 // ==/UserScript==
@@ -213,6 +214,100 @@
         });
     }
 
+    // Enhance search results with unit price and notes icon
+    function enhanceSearchResults() {
+        // Select all search result items
+        const searchItems = document.querySelectorAll('[data-asin]:not([data-asin=""])');
+        searchItems.forEach(item => {
+            const asin = item.getAttribute('data-asin');
+            if (!asin) return;
+            
+            // Skip if already enhanced
+            if (item.querySelector('.amz-note-icon')) return;
+            
+            // Try to get price from various selectors
+            let priceEl = item.querySelector('.a-price .a-offscreen');
+            if (!priceEl) return;
+            
+            const price = parseFloat(priceEl.textContent.replace(/[^\d.]/g, ''));
+            if (!price) return;
+            
+            // Try to get quantity from product title
+            const titleEl = item.querySelector('h2') || item.querySelector('.a-size-base-plus') || item.querySelector('.a-link-normal .a-text-normal');
+            if (!titleEl) return;
+            
+            const titleText = titleEl.textContent;
+            const quantity = extractQuantity(titleText);
+            
+            // Container for price info and note icon
+            let infoContainer = item.querySelector('.amz-enhanced-info');
+            if (!infoContainer) {
+                infoContainer = document.createElement('div');
+                infoContainer.className = 'amz-enhanced-info';
+                infoContainer.style.fontSize = '12px';
+                infoContainer.style.marginTop = '4px';
+                infoContainer.style.display = 'flex';
+                infoContainer.style.alignItems = 'center';
+                
+                // Find a good place to insert our info
+                const priceContainer = priceEl.closest('.a-price').parentNode;
+                if (priceContainer) {
+                    if (priceContainer.nextElementSibling) {
+                        priceContainer.parentNode.insertBefore(infoContainer, priceContainer.nextElementSibling);
+                    } else {
+                        priceContainer.parentNode.appendChild(infoContainer);
+                    }
+                } else {
+                    // Fallback insertion
+                    const actionSection = item.querySelector('.a-section.a-spacing-none.a-spacing-top-small');
+                    if (actionSection) {
+                        actionSection.appendChild(infoContainer);
+                    } else {
+                        return; // Can't find a place to insert
+                    }
+                }
+            }
+            
+            // Clear container
+            infoContainer.innerHTML = '';
+            
+            // Add unit price if quantity is available
+            if (quantity) {
+                const unitPrice = price / quantity;
+                const upSpan = document.createElement('span');
+                upSpan.className = 'amz-unit-price-badge';
+                upSpan.style.color = '#007600';
+                upSpan.style.fontWeight = 'bold';
+                upSpan.style.marginRight = '8px';
+                upSpan.textContent = `Unit: $${unitPrice.toFixed(2)}`;
+                infoContainer.appendChild(upSpan);
+            }
+            
+            // Add notes icon
+            const noteIcon = document.createElement('span');
+            noteIcon.className = 'amz-note-icon';
+            noteIcon.style.cursor = 'pointer';
+            noteIcon.style.marginLeft = '4px';
+            noteIcon.style.verticalAlign = 'middle';
+            noteIcon.title = 'Click to view/add note';
+            noteIcon.innerHTML = '📝';
+            infoContainer.appendChild(noteIcon);
+            
+            // Highlight icon if note exists
+            const note = loadNote(asin);
+            noteIcon.style.opacity = note ? '1' : '0.4';
+            noteIcon.title = note ? 'View note' : 'Add note';
+            
+            // Click to show note popup
+            noteIcon.onclick = function(e) {
+                e.stopPropagation();
+                e.preventDefault();
+                showNotePopup(asin, noteIcon);
+                return false;
+            };
+        });
+    }
+
     // Show a popup for viewing/adding notes
     function showNotePopup(asin, anchorEl) {
         // Remove any existing popup
@@ -285,6 +380,14 @@
                 return; // enhanceCartSidebar is called separately
             }
             
+            // Check if we're on a search page
+            if (window.location.pathname.startsWith('/s') || 
+                window.location.search.includes('keywords=') || 
+                window.location.search.includes('k=')) {
+                updateStatusIndicator('Amazon Notes Script: Search page detected', false);
+                return; // enhanceSearchResults is called separately
+            }
+            
             const asin = getASIN();
             if (!asin) {
                 updateStatusIndicator('Amazon Notes Script: ASIN not found (not a product page)', true);
@@ -326,9 +429,11 @@
     window.addEventListener('DOMContentLoaded', function() {
         main();
         enhanceCartSidebar();
+        enhanceSearchResults();
     });
     setTimeout(function() {
         main();
         enhanceCartSidebar();
+        enhanceSearchResults();
     }, 2000);
 })();
