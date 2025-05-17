@@ -19,3 +19,8 @@ A collection of custom userscripts for the Tampermonkey browser extension.
 2. Click on a script in this repository
 3. Click the "Raw" button
 4. Tampermonkey will detect the userscript and prompt you to install it
+
+## Development
+
+These userscripts were developed with the assistance of AI tools (GitHub Copilot) under a personal license held by the repository owner.
+

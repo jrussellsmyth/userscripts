@@ -279,6 +279,12 @@
     function main() {
         insertStatusIndicator();
         try {
+            // Check if we're on a cart page
+            if (window.location.pathname.includes('/cart/smart-wagon')) {
+                updateStatusIndicator('Amazon Notes Script: Cart page detected', false);
+                return; // enhanceCartSidebar is called separately
+            }
+            
             const asin = getASIN();
             if (!asin) {
                 updateStatusIndicator('Amazon Notes Script: ASIN not found (not a product page)', true);
