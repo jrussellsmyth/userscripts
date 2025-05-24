@@ -5,6 +5,7 @@
 // @description  Add notes to Amazon product pages and auto-calculate unit price for bulk items.
 // @author       You
 // @match        https://www.amazon.com/*/dp/*
+// @match        https://www.amazon.com/dp/*
 // @match        https://www.amazon.com/gp/product/*
 // @match        https://www.amazon.com/cart/smart-wagon*
 // @match        https://www.amazon.com/s*
@@ -185,7 +186,7 @@
                     if (priceContainer) priceContainer.appendChild(up);
                     else item.appendChild(up);
                 }
-                up.textContent = `Unit: $${(price/quantity).toFixed(2)}`;
+                up.textContent = `Unit: $${(price/quantity).toFixed(2)} (${quantity} pcs)`;
             }
             // Notes icon
             let noteIcon = item.querySelector('.amz-note-icon');
